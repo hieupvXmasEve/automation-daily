@@ -1,4 +1,4 @@
-# Hướng Dẫn Sử Dụng CLI Đối Soát Đơn Shopee
+# Hướng Dẫn Sử Dụng Tool Đối Soát Đơn Shopee
 
 ## 1. Mục đích của tool
 
@@ -12,7 +12,10 @@ Tool này dùng để xử lý 2 nhu cầu chính:
 
 2. Tách file Excel Shopee thành danh sách dòng hàng hóa theo từng đơn để phục vụ kho, vận hành, hoặc import sang hệ thống khác.
 
-Tool chạy trực tiếp bằng terminal qua `python main.py`.
+Tool hiện có 2 cách chạy:
+
+- CLI qua `python main.py`
+- web app nội bộ qua `streamlit run streamlit_app.py`
 
 ## 2. Yêu cầu môi trường
 
@@ -25,6 +28,7 @@ Tool chạy trực tiếp bằng terminal qua `python main.py`.
 Chạy lần lượt:
 
 ```bash
+cd /Users/hunt2412/hieupvdev/project/automation-daily
 pyenv install 3.11.10
 pyenv local 3.11.10
 python -m venv .venv
@@ -35,14 +39,40 @@ pip install -r requirements.txt
 Nếu đã cài sẵn Python và `.venv` rồi thì chỉ cần:
 
 ```bash
+cd /Users/hunt2412/hieupvdev/project/automation-daily
 source .venv/bin/activate
+pip install -r requirements.txt
 ```
+
+Sau đó có thể chạy web app nội bộ:
+
+```bash
+cd /Users/hunt2412/hieupvdev/project/automation-daily
+source .venv/bin/activate
+streamlit run streamlit_app.py
+```
+
+Nếu báo không tìm thấy `streamlit` thì chạy lại phần cài đặt ở trên và kiểm tra `.venv` đã được activate hay chưa.
 
 ## 4. Cấu trúc thư mục thường dùng
 
 - [main.py](/Users/hunt2412/hieupvdev/project/automation-daily/main.py): điểm chạy CLI
+- [streamlit_app.py](/Users/hunt2412/hieupvdev/project/automation-daily/streamlit_app.py): điểm chạy web app nội bộ
 - [shopee/](/Users/hunt2412/hieupvdev/project/automation-daily/shopee): nơi đặt file Excel và PDF đầu vào
 - [output/](/Users/hunt2412/hieupvdev/project/automation-daily/output): nơi sinh file kết quả
+
+## 4.1. Web app nội bộ dùng khi nào
+
+Nên dùng web app khi:
+
+- nhân sự vận hành không muốn chạy terminal
+- cần upload file trực tiếp rồi tải kết quả về
+- cần xem nhanh metric và bảng lỗi trước khi tải file
+
+Web app hiện có 2 màn hình chính:
+
+- `Compare Orders`: upload 1 file Excel + 1 file PDF, chạy đối soát, xem metric, tải `csv/xlsx/pdf`
+- `Extract Item Rows`: upload 1 file Excel, xem trước item rows, tải `csv/xlsx`
 
 Ví dụ file đầu vào hiện có trong project:
 

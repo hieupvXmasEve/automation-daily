@@ -4,6 +4,8 @@
 
 - Terminal command `compare`
 - Terminal command `extract-items`
+- Shared workflow services for compare and extract flows
+- Internal Streamlit web app for compare and item export
 - Excel aggregation by order id
 - Item-level Shopee Excel export for warehouse/ops use
 - PDF page parser
@@ -17,3 +19,4 @@
 - Add JSON export
 - Add richer mismatch diagnostics for product lines
 - Add OCR fallback for scanned PDFs
+- Package Streamlit app for non-technical staff

@@ -4,8 +4,14 @@
 
 - `CLI`
   - parses arguments
-  - creates output directory
   - prints progress summary
+- `Streamlit App`
+  - accepts local uploads
+  - shows metrics, tables, and download actions
+- `Shared Services`
+  - validate input paths
+  - orchestrate compare and extract workflows
+  - create output artifacts for CLI and UI
 - `Excel Loader`
   - reads Shopee workbook
   - groups line items into order records
@@ -21,9 +27,9 @@
 ## Flow
 
 ```text
-Excel -> normalize ----\
-                         -> compare -> exporters -> files
-PDF   -> normalize ----/
+CLI / Streamlit -> shared services -> normalize Excel ----\
+                                                           -> compare -> exporters -> files
+CLI / Streamlit -> shared services -> normalize PDF   ----/
 ```
 
 ## Design Choices
@@ -31,3 +37,4 @@ PDF   -> normalize ----/
 - `pandas` for Excel robustness
 - `pdfplumber` for existing text-based labels
 - Pillow-based PDF export to support Vietnamese Unicode without external PDF libraries
+- Streamlit stays a thin UI wrapper; compare logic remains outside the UI layer

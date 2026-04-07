@@ -1,8 +1,8 @@
-# CLI Design Guidelines
+# Internal Tool Design Guidelines
 
 ## Goal
 
-Build a terminal-first tool for warehouse/ops use. Fast input. Low ceremony. Clear file outputs.
+Build a local tool for warehouse/ops use. Fast input. Low ceremony. Clear file outputs. Keep both CLI and internal web UI thin over the same compare core.
 
 ## Interaction Model
 
@@ -11,6 +11,8 @@ Build a terminal-first tool for warehouse/ops use. Fast input. Low ceremony. Cle
 - Optional outputs: `--formats csv excel pdf`
 - Optional filters: `--only matched|mismatch|missing-in-excel|missing-in-pdf`
 - Default output folder: `output/{timestamp}`
+- One internal web app entrypoint: `streamlit run streamlit_app.py`
+- Web app should use explicit submit buttons, read-only tables, metric cards, and download buttons
 
 ## UX Rules
 
@@ -19,6 +21,9 @@ Build a terminal-first tool for warehouse/ops use. Fast input. Low ceremony. Cle
 - Show a final terminal summary:
   total excel orders, total pdf labels, matched, mismatched, missing
 - Print exact paths of exported files
+- In Streamlit, run heavy work only after explicit submit
+- In Streamlit, keep last successful result in session state
+- In Streamlit, prefer read-only review via `st.dataframe`
 - Keep text ASCII-friendly where possible, but preserve Vietnamese data content
 
 ## Matching Rules
@@ -39,6 +44,6 @@ Build a terminal-first tool for warehouse/ops use. Fast input. Low ceremony. Cle
 ## Non-Goals For V1
 
 - OCR for scanned PDFs
-- GUI/TUI menu
 - Auto-download from Shopee
 - Pixel-perfect regeneration of original shipping labels
+- Public-facing hosted web product

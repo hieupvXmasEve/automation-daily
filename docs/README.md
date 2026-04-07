@@ -1,8 +1,11 @@
-# Shopee Order Compare CLI
+# Shopee Order Compare CLI + Streamlit
 
 ## Overview
 
-CLI Python app to compare Shopee order exports in Excel with printed shipping-label PDFs, then export the audit result as CSV, Excel, or PDF.
+Offline Python tool for Shopee order audit.
+
+- CLI remains available for scripted or terminal-first workflows
+- Internal Streamlit app adds upload, review, and download flows for office users
 
 ## Features
 
@@ -12,6 +15,7 @@ CLI Python app to compare Shopee order exports in Excel with printed shipping-la
 - Validate `Mã vận đơn`, order datetime, and total quantity
 - Export `comparison.csv`, `comparison.xlsx`, `comparison.pdf`
 - Export item-level rows from Shopee Excel for warehouse/ops workflows
+- Internal web UI via Streamlit for compare and extract-items flows
 
 ## Requirements
 
@@ -21,7 +25,10 @@ CLI Python app to compare Shopee order exports in Excel with printed shipping-la
 
 ## Setup
 
+From the project root:
+
 ```bash
+cd /Users/hunt2412/hieupvdev/project/automation-daily
 pyenv install 3.11.10
 pyenv local 3.11.10
 python -m venv .venv
@@ -29,7 +36,15 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run
+If `.venv` already exists:
+
+```bash
+cd /Users/hunt2412/hieupvdev/project/automation-daily
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Run CLI
 
 ```bash
 python main.py compare \
@@ -41,6 +56,21 @@ python main.py extract-items \
   --excel "shopee/Order.all.order_creation_date.20260402_20260406.xlsx" \
   --out-file "output/order-items.xlsx"
 ```
+
+## Run Internal Web App
+
+```bash
+cd /Users/hunt2412/hieupvdev/project/automation-daily
+source .venv/bin/activate
+streamlit run streamlit_app.py
+```
+
+If `streamlit` is not found, run setup again and make sure the virtualenv is active.
+
+Internal UI scope:
+
+- Compare mode: upload one Excel + one PDF, review summary/table, download CSV/XLSX/PDF
+- Extract-items mode: upload one Excel, preview rows, download CSV/XLSX
 
 ## Main Options
 
@@ -110,6 +140,7 @@ python -m unittest discover -s tests -v
 
 ## Limitations
 
+- Streamlit app is local/internal only; no auth, hosting, or multi-user persistence
 - PDF parser assumes text-based Shopee labels, not scanned images
 - Excel export structure can change; required columns are validated explicitly
 - Recipient data in Shopee Excel may be masked, so recipient is exported as reference only, not used as a compare key
