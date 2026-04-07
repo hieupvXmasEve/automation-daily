@@ -11,9 +11,11 @@ from shopee_compare.services import (
     run_extract_items,
     temporary_upload_workspace,
 )
+from shopee_compare.streamlit_workflows import run_tiktok_pdf_audit_upload
 
 
 ROOT = Path(__file__).resolve().parent.parent
+TIKTOK_PDF_PATH = Path.home() / "Downloads" / "3.TikTok PPM (B4716) - 10- đơn  - 07.04.2026.pdf"
 
 
 def _fixture_path(pattern: str) -> Path:
@@ -84,6 +86,16 @@ class WorkflowServiceTests(unittest.TestCase):
             self.assertEqual(pdf_path.read_bytes(), b"pdf-bytes")
 
         self.assertFalse(root.exists())
+
+    @unittest.skipUnless(TIKTOK_PDF_PATH.is_file(), "Local TikTok PDF fixture not available")
+    def test_tiktok_pdf_upload_workflow_returns_grouped_order_rows(self) -> None:
+        upload = FakeUpload(TIKTOK_PDF_PATH.name, TIKTOK_PDF_PATH.read_bytes())
+        result = run_tiktok_pdf_audit_upload(upload, "csv")
+
+        self.assertEqual(result["summary"]["pdf_pages"], 12)
+        self.assertEqual(result["summary"]["unique_orders"], 10)
+        self.assertEqual(result["row_count"], 10)
+        self.assertGreater(len(result["data"]), 0)
 
 
 if __name__ == "__main__":

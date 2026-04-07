@@ -8,8 +8,10 @@ import pandas as pd
 from .services import (
     CompareRunRequest,
     ExtractItemsRunRequest,
+    TikTokPdfAuditRunRequest,
     run_compare,
     run_extract_items,
+    run_tiktok_pdf_audit,
     temporary_upload_workspace,
 )
 
@@ -63,6 +65,29 @@ def run_extract_upload(excel_file: object, export_format: str) -> dict[str, obje
         data = result.output_path.read_bytes()
 
     return {
+        "frame": result.frame,
+        "row_count": result.row_count,
+        "file_name": result.output_path.name,
+        "data": data,
+        "mime": DOWNLOAD_MIME_TYPES[result.output_path.suffix],
+    }
+
+
+def run_tiktok_pdf_audit_upload(pdf_file: object, export_format: str) -> dict[str, object]:
+    with temporary_upload_workspace() as workspace, TemporaryDirectory(prefix="tiktok-pdf-output-") as output_root:
+        pdf_path = workspace.write_upload(pdf_file, "tiktok-labels.pdf")
+        output_name = "tiktok-pdf-orders.xlsx" if export_format == "excel" else "tiktok-pdf-orders.csv"
+        result = run_tiktok_pdf_audit(
+            TikTokPdfAuditRunRequest(
+                pdf_path=pdf_path,
+                export_format=export_format,
+                output_path=Path(output_root) / output_name,
+            )
+        )
+        data = result.output_path.read_bytes()
+
+    return {
+        "summary": result.summary,
         "frame": result.frame,
         "row_count": result.row_count,
         "file_name": result.output_path.name,
