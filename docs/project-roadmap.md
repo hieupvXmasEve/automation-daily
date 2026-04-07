@@ -6,9 +6,11 @@
 - Terminal command `extract-items`
 - Shared workflow services for compare and extract flows
 - Internal Streamlit web app for compare and item export
+- TikTok Shop PDF audit tab that counts unique orders by `order_id`
 - Excel aggregation by order id
 - Item-level Shopee Excel export for warehouse/ops use
 - PDF page parser
+- Multi-page TikTok label collapsing with CSV/XLSX export
 - CSV, XLSX, PDF export
 - Integration tests with sample files
 
