@@ -131,6 +131,17 @@ def slugify_text(value: object) -> str:
     return "".join(ch.lower() for ch in without_accents if ch.isalnum())
 
 
+def normalize_lookup_text(value: object) -> str:
+    return slugify_text(value)
+
+
+def sanitize_scanned_text(value: object) -> str | None:
+    text = normalize_text(value)
+    if not text:
+        return None
+    return text.replace("\x00", "").strip()
+
+
 def ascii_fold_text(value: object) -> str:
     text = normalize_text(value) or ""
     normalized = unicodedata.normalize("NFKD", text)

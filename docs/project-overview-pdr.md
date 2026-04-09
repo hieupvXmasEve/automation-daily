@@ -2,7 +2,7 @@
 
 ## Problem
 
-Ops needs a local tool to verify whether Shopee order exports and printed shipping labels align before downstream handling.
+Ops needs one local tool to verify Shopee order exports against printed labels and to resolve QR codes against imported marketplace shop files during mobile warehouse handling.
 
 ## Users
 
@@ -14,12 +14,15 @@ Ops needs a local tool to verify whether Shopee order exports and printed shippi
 
 - Shopee Excel export
 - Shipping label PDF
+- Marketplace shop files in `csv` or `xlsx`
+- Decoded QR text from a mobile browser camera or manual fallback input
 
 ## Outputs
 
 - CSV comparison report
 - Excel workbook report
 - PDF printable report
+- Excel scan review table filtered by shop when needed
 
 ## Functional Requirements
 
@@ -29,6 +32,12 @@ Ops needs a local tool to verify whether Shopee order exports and printed shippi
 - Compare orders by order id
 - Highlight missing and mismatched orders
 - Export reports to a chosen directory
+- Import multiple shop files in one Streamlit session
+- Let the user choose one compare field per imported shop file
+- Scan QR codes from a phone browser camera
+- Resolve the scanned text to the matching shop and source row
+- Prevent duplicate scan rows from being appended twice
+- Filter review rows by shop and export them to Excel
 
 ## Non-Functional Requirements
 
@@ -37,10 +46,13 @@ Ops needs a local tool to verify whether Shopee order exports and printed shippi
 - Web UI stays internal-only and local-first
 - Clear error messages
 - Deterministic output for the same input
+- Mobile camera path requires a secure browser context
+- Imported shop registry and scan rows stay session-local
 
 ## V1 Out Of Scope
 
 - OCR
-- Multiple marketplace support
+- Persistent multi-user storage
+- Native mobile app or scanner-hardware SDK integration
 - Direct Shopee API integration
 - Public deployment or authentication system

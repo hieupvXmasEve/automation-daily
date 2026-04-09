@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from shopee_compare.mobile_qr_scanner_assets import get_vendored_qr_library_url
 from shopee_compare.services import (
     CompareRunRequest,
     ExtractItemsRunRequest,
@@ -11,7 +12,13 @@ from shopee_compare.services import (
     run_extract_items,
     temporary_upload_workspace,
 )
-from shopee_compare.streamlit_workflows import run_tiktok_pdf_audit_upload
+from shopee_compare.streamlit_workflows import (
+    build_imported_shop_from_preview,
+    build_marketplace_scan_export,
+    load_marketplace_import_preview_upload,
+    run_marketplace_qr_scan_action,
+    run_tiktok_pdf_audit_upload,
+)
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -86,6 +93,27 @@ class WorkflowServiceTests(unittest.TestCase):
             self.assertEqual(pdf_path.read_bytes(), b"pdf-bytes")
 
         self.assertFalse(root.exists())
+
+    def test_marketplace_scan_workflow_preview_scan_and_export(self) -> None:
+        upload = FakeUpload(
+            "orders.csv",
+            "order_id,trackingCode\nWEB-1,QR-001\nWEB-2,QR-002\n".encode("utf-8"),
+        )
+
+        preview = load_marketplace_import_preview_upload(upload, "website", "Website A")
+        imported_shop = build_imported_shop_from_preview(preview, "trackingCode")
+        result = run_marketplace_qr_scan_action([imported_shop], [], "QR-001", "manual")
+        export = build_marketplace_scan_export([result["scan_row"]] if result["scan_row"] else [])
+
+        self.assertEqual(result["status"], "matched")
+        self.assertIsNotNone(result["scan_row"])
+        self.assertEqual(export["row_count"], 1)
+        self.assertGreater(len(export["data"]), 0)
+
+    def test_vendored_qr_library_url_is_embedded_data_url(self) -> None:
+        library_url = get_vendored_qr_library_url()
+        self.assertTrue(library_url.startswith("data:text/javascript;base64,"))
+        self.assertGreater(len(library_url), 1000)
 
     @unittest.skipUnless(TIKTOK_PDF_PATH.is_file(), "Local TikTok PDF fixture not available")
     def test_tiktok_pdf_upload_workflow_returns_grouped_order_rows(self) -> None:

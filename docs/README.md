@@ -1,8 +1,8 @@
-# Shopee Order Compare CLI + Streamlit
+# Marketplace Ops Compare + Mobile QR Scan
 
 ## Overview
 
-Offline Python tool for Shopee order audit.
+Offline-first Python tool for Shopee order audit plus a local Streamlit workflow for mobile QR scan across imported marketplace shop files.
 
 - CLI remains available for scripted or terminal-first workflows
 - Internal Streamlit app adds upload, review, and download flows for office users
@@ -15,7 +15,11 @@ Offline Python tool for Shopee order audit.
 - Validate `Mã vận đơn`, order datetime, and total quantity
 - Export `comparison.csv`, `comparison.xlsx`, `comparison.pdf`
 - Export item-level rows from Shopee Excel for warehouse/ops workflows
-- Internal web UI via Streamlit for compare and extract-items flows
+- Audit TikTok Shop label PDFs by grouped `order_id`
+- Import repeated shop files from `Shopee`, `Lazada`, `TikTok`, and `Website`
+- Choose one compare field per imported shop file
+- Scan QR codes from a phone browser camera, dedupe hits, filter by shop, and export `.xlsx`
+- Internal web UI via Streamlit for compare, extract-items, TikTok audit, and mobile QR scan flows
 
 ## Requirements
 
@@ -71,6 +75,14 @@ Internal UI scope:
 
 - Compare mode: upload one Excel + one PDF, review summary/table, download CSV/XLSX/PDF
 - Extract-items mode: upload one Excel, preview rows, download CSV/XLSX
+- TikTok PDF Audit: upload one TikTok label PDF, group repeated `order_id` values, download CSV/XLSX
+- Mobile QR Scan: import one or more shop files, choose a compare field per shop, scan with a phone camera or manual fallback text, review a deduped table, filter by shop, download `.xlsx`
+
+## Mobile QR Scan Notes
+
+- Open the app on the phone from a secure URL. `HTTPS` is the reliable path. Plain `http://192.168.x.x:8501` is expected to fail camera access in most mobile browsers.
+- The browser decodes the QR locally and only sends decoded text back to Python for matching.
+- The QR decoder bundle is vendored locally inside the app, so the phone browser does not need to fetch `html5-qrcode` from a public CDN at scan time.
 
 ## Main Options
 
@@ -144,3 +156,5 @@ python -m unittest discover -s tests -v
 - PDF parser assumes text-based Shopee labels, not scanned images
 - Excel export structure can change; required columns are validated explicitly
 - Recipient data in Shopee Excel may be masked, so recipient is exported as reference only, not used as a compare key
+- Mobile QR scan needs a secure browser context (`HTTPS` or trusted localhost)
+- Imported shop registry and scan review rows live only in the active Streamlit session

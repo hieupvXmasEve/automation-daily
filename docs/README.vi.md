@@ -1,8 +1,8 @@
-# Hướng Dẫn Sử Dụng Tool Đối Soát Đơn Shopee
+# Hướng Dẫn Sử Dụng Tool Marketplace Ops
 
 ## 1. Mục đích của tool
 
-Tool này dùng để xử lý 2 nhu cầu chính:
+Tool này dùng để xử lý 4 nhu cầu chính:
 
 1. So sánh file Excel đơn hàng Shopee với file PDF phiếu giao hàng để tìm:
    - đơn bị thiếu trên PDF
@@ -11,6 +11,10 @@ Tool này dùng để xử lý 2 nhu cầu chính:
    - đơn có chênh lệch số lượng giữa Excel và phần nội dung nhìn thấy trên PDF
 
 2. Tách file Excel Shopee thành danh sách dòng hàng hóa theo từng đơn để phục vụ kho, vận hành, hoặc import sang hệ thống khác.
+
+3. Gom file PDF nhãn TikTok Shop theo `order_id` để đếm đúng số đơn khi một đơn có thể kéo dài qua nhiều trang.
+
+4. Mở web app trên điện thoại, dùng camera sau để quét QR, dò mã đó thuộc shop nào dựa trên field người dùng chọn ở từng file import, tránh thêm trùng, lọc theo shop, và xuất Excel.
 
 Tool hiện có 2 cách chạy:
 
@@ -68,11 +72,14 @@ Nên dùng web app khi:
 - nhân sự vận hành không muốn chạy terminal
 - cần upload file trực tiếp rồi tải kết quả về
 - cần xem nhanh metric và bảng lỗi trước khi tải file
+- cần quét QR trực tiếp bằng camera điện thoại
 
-Web app hiện có 2 màn hình chính:
+Web app hiện có 4 màn hình chính:
 
 - `Compare Orders`: upload 1 file Excel + 1 file PDF, chạy đối soát, xem metric, tải `csv/xlsx/pdf`
 - `Extract Item Rows`: upload 1 file Excel, xem trước item rows, tải `csv/xlsx`
+- `TikTok PDF Audit`: upload 1 file PDF TikTok Shop, gom `order_id`, xem bảng tổng hợp, tải `csv/xlsx`
+- `Mobile QR Scan`: import nhiều file shop theo từng sàn, chọn field so sánh, quét QR bằng camera điện thoại hoặc nhập tay, lọc theo shop, tải `xlsx`
 
 Ví dụ file đầu vào hiện có trong project:
 
@@ -336,7 +343,53 @@ Tool ưu tiên:
 2. nếu trống thì lấy `Ngày xuất hàng`
 3. nếu vẫn trống thì lấy `Thời gian giao hàng`
 
-## 9. Cách chạy nhanh cho người dùng cuối
+## 9. Màn hình `Mobile QR Scan`
+
+### 9.1. Dùng khi nào
+
+Dùng màn hình này khi:
+
+- bạn có nhiều file đơn theo từng shop hoặc từng sàn
+- mỗi shop cần đối chiếu QR theo một cột khác nhau
+- cần biết mã vừa quét thuộc shop nào
+- cần tránh cộng trùng khi quét nhiều lần
+- cần lọc kết quả theo shop rồi xuất Excel
+
+### 9.2. Luồng thao tác
+
+1. Mở web app trên điện thoại bằng đường dẫn `HTTPS`.
+2. Vào tab `Mobile QR Scan`.
+3. Ở phần `Import Shop Files`:
+   - chọn `Marketplace`: `shopee`, `lazada`, `tiktok`, hoặc `website`
+   - nhập `Shop label`
+   - upload file `csv` hoặc `xlsx`
+   - bấm `Load Fields`
+4. Chọn `Compare field` rồi bấm `Save Imported Shop`.
+5. Bấm `Start camera` để mở camera sau.
+6. Đưa QR vào khung quét.
+7. Khi quét xong:
+   - app sẽ tạm dừng camera
+   - nếu muốn quét tiếp thì bấm `Scan next`
+   - nếu muốn dừng thì bấm `Stop camera`
+8. Xem bảng kết quả ở phần `Review Table`, lọc theo shop nếu cần, rồi tải file Excel.
+
+### 9.3. Các trạng thái khi quét
+
+- `matched`: tìm thấy đúng 1 dòng thuộc đúng 1 shop
+- `duplicate`: mã đó đã được thêm trước đó rồi, app không thêm lại
+- `not-found`: không thấy mã trong các shop đã import
+- `ambiguous`: có nhiều kết quả trùng nhau, app không tự chọn
+
+### 9.4. Lưu ý rất quan trọng về camera điện thoại
+
+- Camera trên browser di động cần `secure context`.
+- Thực tế nên mở bằng `HTTPS`.
+- Không nên kỳ vọng `http://192.168.x.x:8501` sẽ dùng camera ổn định.
+- Nếu camera bị chặn hoặc browser không hỗ trợ, dùng ô `Manual fallback text`.
+- Tính năng này quét QR trực tiếp trong browser, không phải upload ảnh để OCR.
+- Bundle thư viện quét QR đã được đóng gói local trong app, nên browser không cần tải `html5-qrcode` từ CDN lúc quét.
+
+## 10. Cách chạy nhanh cho người dùng cuối
 
 ### Trường hợp 1: chỉ cần kiểm tra phiếu PDF có bị cắt item không
 
@@ -370,20 +423,21 @@ python main.py extract-items \
   --out-file "output/order-items.xlsx"
 ```
 
-## 10. Một số lưu ý thực tế
+## 11. Một số lưu ý thực tế
 
 - PDF phải là PDF text-based. Nếu là ảnh scan thì parser sẽ không đọc ổn định.
 - Khi Shopee đổi template PDF, một số marker có thể lệch và tool sẽ báo `pdf template requires review`.
 - Nếu phiếu PDF quá dài và phần `Nội dung hàng` bị cắt, nên tin dữ liệu Excel hơn dữ liệu nhìn thấy trên PDF.
 - `missing_excel_items` là cột dành cho việc kiểm lại hàng thiếu hoặc hàng bị ẩn/cắt trên phiếu.
+- Với tab `Mobile QR Scan`, dữ liệu shop import và bảng scan chỉ sống trong session Streamlit hiện tại.
 
-## 11. Chạy test
+## 12. Chạy test
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-## 12. Tài liệu liên quan
+## 13. Tài liệu liên quan
 
 - Bản README hiện tại: [README.md](/Users/hunt2412/hieupvdev/project/automation-daily/docs/README.md)
 - CLI implementation: [cli.py](/Users/hunt2412/hieupvdev/project/automation-daily/shopee_compare/cli.py)
