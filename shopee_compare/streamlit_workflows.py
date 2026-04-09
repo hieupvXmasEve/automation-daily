@@ -136,6 +136,7 @@ def run_marketplace_qr_scan_action(
     return {
         "status": event.status,
         "message": event.message,
+        "scan_rows": event.scan_rows,
         "scan_row": event.scan_row,
     }
 

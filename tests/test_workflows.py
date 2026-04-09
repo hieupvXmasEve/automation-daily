@@ -4,7 +4,10 @@ from pathlib import Path
 import tempfile
 import unittest
 
+import pandas as pd
+
 from shopee_compare.mobile_qr_scanner_assets import get_vendored_qr_library_url
+from shopee_compare.streamlit_marketplace_qr_scan_tab import _filter_preview_frame
 from shopee_compare.services import (
     CompareRunRequest,
     ExtractItemsRunRequest,
@@ -107,12 +110,26 @@ class WorkflowServiceTests(unittest.TestCase):
         preview = load_marketplace_import_preview_upload(upload, "website", "Website A")
         imported_shop = build_imported_shop_from_preview(preview, "trackingCode")
         result = run_marketplace_qr_scan_action([imported_shop], [], "QR-001", "manual")
-        export = build_marketplace_scan_export([result["scan_row"]] if result["scan_row"] else [])
+        export = build_marketplace_scan_export(result["scan_rows"])
 
         self.assertEqual(result["status"], "matched")
-        self.assertIsNotNone(result["scan_row"])
+        self.assertEqual(len(result["scan_rows"]), 1)
         self.assertEqual(export["row_count"], 1)
         self.assertGreater(len(export["data"]), 0)
+
+    def test_marketplace_preview_filter_supports_column_and_global_search(self) -> None:
+        frame = pd.DataFrame(
+            [
+                {"order_id": "WEB-1", "trackingCode": "QR-001", "customer": "Alice"},
+                {"order_id": "WEB-2", "trackingCode": "QR-002", "customer": "Bob"},
+            ]
+        )
+
+        by_column = _filter_preview_frame(frame, "trackingCode", "qr-002")
+        across_all = _filter_preview_frame(frame, "All columns", "alice")
+
+        self.assertEqual(by_column["order_id"].tolist(), ["WEB-2"])
+        self.assertEqual(across_all["order_id"].tolist(), ["WEB-1"])
 
     def test_vendored_qr_library_url_is_embedded_data_url(self) -> None:
         library_url = get_vendored_qr_library_url()

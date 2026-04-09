@@ -59,6 +59,7 @@ def build_imported_shop_dataset(preview: MarketplaceImportPreview, compare_field
             normalized_compare_value=normalized,
             source_order_reference=reference_value,
             source_reference_field=reference_field,
+            raw_data=raw_row.to_dict(),
         )
         rows.append(imported_row)
         lookup.setdefault(normalized, []).append(imported_row)

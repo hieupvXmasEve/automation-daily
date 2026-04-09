@@ -34,7 +34,7 @@
 - `Marketplace QR Match Service`
   - normalizes scanned text
   - searches across imported shops in session state
-  - returns `matched`, `duplicate`, `not-found`, or `ambiguous`
+  - returns all newly matched rows for one scan and blocks only rows already present in the review table
   - prepares filtered Excel export rows
 - `Matcher`
   - joins records by order id
@@ -62,4 +62,5 @@ Phone browser camera -> V2 QR component -> decoded QR text -----------/
 - TikTok audit groups by `order_id` instead of raw PDF page count because some labels spill onto a second page
 - Mobile scan uses a Streamlit V2 component because `st.camera_input` captures still images, not continuous QR scan events
 - QR decoding stays in the browser so Python receives decoded text instead of raw video frames
+- The QR component disables Streamlit V2 style isolation because the vendored `html5-qrcode` runtime resolves scan nodes through `document.getElementById(...)`, which breaks when mounted inside a shadow root
 - Mobile rollout must use a secure URL because browser camera APIs do not behave reliably on plain LAN HTTP

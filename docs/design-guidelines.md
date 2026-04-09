@@ -46,7 +46,8 @@ Build a local tool for warehouse/ops use. Fast input. Low ceremony. Clear file o
 - For marketplace QR scan:
   - compare key is the user-selected field per imported shop
   - match rule is exact after normalization
-  - result states are `matched`, `duplicate`, `not-found`, `ambiguous`
+  - one scan can append multiple matched rows into the review table
+  - result states are `matched`, `duplicate`, `not-found`
 
 ## Output Rules
 

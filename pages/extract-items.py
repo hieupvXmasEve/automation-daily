@@ -1,0 +1,3 @@
+from shopee_compare.streamlit_existing_tabs import render_extract_tab
+
+render_extract_tab()

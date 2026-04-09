@@ -13,10 +13,12 @@ SCAN_RESULT_COLUMNS = [
     "scanned_text",
     "marketplace",
     "shop_label",
+    "shop_id",
     "compare_field",
     "matched_value",
     "source_order_reference",
     "source_reference_field",
+    "source_row_number",
     "source_file",
     "status",
     "notes",
@@ -30,6 +32,7 @@ class ImportedShopRow:
     normalized_compare_value: str
     source_order_reference: str
     source_reference_field: str
+    raw_data: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -73,6 +76,7 @@ class ScanMatchCandidate:
 @dataclass(slots=True)
 class MarketplaceScanResultRow:
     shop_id: str
+    source_row_number: int
     scanned_at: str
     scan_source: str
     scanned_text: str
@@ -85,30 +89,39 @@ class MarketplaceScanResultRow:
     source_file: str
     status: str
     notes: str
+    raw_data: dict[str, str] = field(default_factory=dict)
 
     def dedupe_key(self) -> str:
-        return f"{self.shop_id}:{self.compare_field}:{normalize_lookup_text(self.matched_value)}"
+        return f"{self.shop_id}:{self.source_row_number}"
 
     def to_row(self) -> dict[str, object]:
-        return {
+        base = {
             "scanned_at": self.scanned_at,
             "scan_source": self.scan_source,
             "scanned_text": self.scanned_text,
             "marketplace": self.marketplace,
             "shop_label": self.shop_label,
+            "shop_id": self.shop_id,
             "compare_field": self.compare_field,
             "matched_value": self.matched_value,
             "source_order_reference": self.source_order_reference,
             "source_reference_field": self.source_reference_field,
+            "source_row_number": self.source_row_number,
             "source_file": self.source_file,
             "status": self.status,
             "notes": self.notes,
         }
+        # Append all original columns from the uploaded source file
+        base.update(self.raw_data)
+        return base
 
 
 @dataclass(slots=True)
 class MarketplaceScanEvent:
     status: str
     message: str
-    scan_row: MarketplaceScanResultRow | None = None
+    scan_rows: list[MarketplaceScanResultRow] = field(default_factory=list)
 
+    @property
+    def scan_row(self) -> MarketplaceScanResultRow | None:
+        return self.scan_rows[0] if self.scan_rows else None

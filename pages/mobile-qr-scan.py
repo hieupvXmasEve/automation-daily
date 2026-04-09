@@ -1,0 +1,3 @@
+from shopee_compare.streamlit_marketplace_qr_scan_tab import render_marketplace_qr_scan_tab
+
+render_marketplace_qr_scan_tab()

@@ -80,6 +80,9 @@ Web app hiện có 4 màn hình chính:
 - `Extract Item Rows`: upload 1 file Excel, xem trước item rows, tải `csv/xlsx`
 - `TikTok PDF Audit`: upload 1 file PDF TikTok Shop, gom `order_id`, xem bảng tổng hợp, tải `csv/xlsx`
 - `Mobile QR Scan`: import nhiều file shop theo từng sàn, chọn field so sánh, quét QR bằng camera điện thoại hoặc nhập tay, lọc theo shop, tải `xlsx`
+- Ở bước preview import, app hiển thị toàn bộ dữ liệu đã import và hỗ trợ filter theo cột để kiểm tra trước khi lưu shop.
+
+- Nếu 1 lần quét khớp với nhiều dòng trong file import, app sẽ thêm toàn bộ các dòng match mới vào bảng review. Khi quét lại, app chỉ bỏ qua các dòng đã tồn tại trong bảng review.
 
 Ví dụ file đầu vào hiện có trong project:
 
@@ -375,10 +378,9 @@ Dùng màn hình này khi:
 
 ### 9.3. Các trạng thái khi quét
 
-- `matched`: tìm thấy đúng 1 dòng thuộc đúng 1 shop
-- `duplicate`: mã đó đã được thêm trước đó rồi, app không thêm lại
+- `matched`: tìm thấy 1 hoặc nhiều dòng và thêm các dòng mới đó vào bảng review
+- `duplicate`: tất cả các dòng match của mã đó đã có sẵn trong bảng review nên app không thêm lại
 - `not-found`: không thấy mã trong các shop đã import
-- `ambiguous`: có nhiều kết quả trùng nhau, app không tự chọn
 
 ### 9.4. Lưu ý rất quan trọng về camera điện thoại
 

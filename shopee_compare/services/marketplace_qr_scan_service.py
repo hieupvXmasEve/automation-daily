@@ -37,7 +37,12 @@ def run_marketplace_qr_scan(request: MarketplaceQrScanRequest) -> MarketplaceSca
 
 def build_scan_rows_frame(rows: list[MarketplaceScanResultRow], shop_id: str | None = None) -> pd.DataFrame:
     filtered_rows = [row for row in rows if shop_id in {None, "", row.shop_id}]
-    return pd.DataFrame([row.to_row() for row in filtered_rows], columns=SCAN_RESULT_COLUMNS)
+    if not filtered_rows:
+        return pd.DataFrame(columns=SCAN_RESULT_COLUMNS)
+    # Collect dynamic source-file columns from raw_data (preserve insertion order, dedup)
+    raw_keys = list(dict.fromkeys(key for row in filtered_rows for key in row.raw_data))
+    all_columns = SCAN_RESULT_COLUMNS + raw_keys
+    return pd.DataFrame([row.to_row() for row in filtered_rows], columns=all_columns)
 
 
 def export_scan_rows_excel(

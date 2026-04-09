@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pandas as pd
 import streamlit as st
 
 from .marketplace_scan_models import ImportedShopDataset, MarketplaceImportPreview, MarketplaceScanResultRow
@@ -70,7 +71,7 @@ def _render_import_section() -> None:
 
 def _render_preview_form(preview: MarketplaceImportPreview) -> None:
     st.write(f"Preview: `{preview.source_file_name}` with `{preview.row_count}` rows.")
-    st.dataframe(preview.frame.head(10), use_container_width=True, height=220)
+    _render_preview_table(preview)
     with st.form("marketplace-import-save-form"):
         compare_field = st.selectbox("Compare field", preview.available_fields, index=0)
         submitted = st.form_submit_button("Save Imported Shop", use_container_width=True)
@@ -83,6 +84,37 @@ def _render_preview_form(preview: MarketplaceImportPreview) -> None:
             st.rerun()
         except Exception as exc:
             st.error(str(exc))
+
+
+def _render_preview_table(preview: MarketplaceImportPreview) -> pd.DataFrame:
+    columns = ["All columns"] + list(preview.frame.columns)
+    controls = st.columns([1, 2])
+    selected_column = controls[0].selectbox("Filter column", columns, index=0, key="marketplace-preview-filter-column")
+    filter_text = controls[1].text_input(
+        "Filter value",
+        placeholder="Type to filter preview rows",
+        key="marketplace-preview-filter-text",
+    )
+    filtered_frame = _filter_preview_frame(preview.frame, selected_column, filter_text)
+    st.caption(f"Showing {len(filtered_frame.index)} / {len(preview.frame.index)} imported rows.")
+    st.dataframe(filtered_frame, use_container_width=True, height=420)
+    return filtered_frame
+
+
+def _filter_preview_frame(frame: pd.DataFrame, selected_column: str, filter_text: str) -> pd.DataFrame:
+    if not filter_text.strip():
+        return frame
+
+    needle = filter_text.strip().casefold()
+    if selected_column == "All columns":
+        mask = frame.fillna("").astype(str).apply(
+            lambda row: any(needle in value.casefold() for value in row),
+            axis=1,
+        )
+        return frame[mask].copy()
+
+    mask = frame[selected_column].fillna("").astype(str).str.casefold().str.contains(needle, regex=False)
+    return frame[mask].copy()
 
 
 def _render_scanner_section() -> None:
@@ -117,8 +149,8 @@ def _render_event_feedback(event: dict[str, str]) -> None:
 
 def _apply_scan(scanned_text: str, scan_source: str) -> None:
     result = run_marketplace_qr_scan_action(st.session_state[SHOPS_KEY], st.session_state[ROWS_KEY], scanned_text, scan_source)
-    if result["scan_row"] is not None:
-        st.session_state[ROWS_KEY].append(result["scan_row"])
+    if result["scan_rows"]:
+        st.session_state[ROWS_KEY].extend(result["scan_rows"])
     st.session_state[EVENT_KEY] = {"status": result["status"], "message": result["message"]}
 
 

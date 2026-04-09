@@ -22,14 +22,15 @@ HTML = """
 </div>
 """
 CSS = """
-.qr-wrap { border: 1px solid rgba(49,51,63,0.2); border-radius: 0.75rem; padding: 0.75rem; background: var(--st-secondary-background-color); }
+.qr-wrap { width: 100%; max-width: 36rem; margin: 0 auto; border: 1px solid rgba(49,51,63,0.2); border-radius: 0.75rem; padding: 0.75rem; background: var(--st-secondary-background-color); }
 .qr-status { font-size: 0.95rem; margin-bottom: 0.75rem; min-height: 2.5rem; }
 .qr-status[data-kind="error"] { color: #b42318; }
 .qr-status[data-kind="paused"] { color: #175cd3; }
 .qr-status[data-kind="scanning"] { color: #027a48; }
 .qr-camera-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
 .qr-camera-select { flex: 1 1 16rem; min-width: 0; border: 1px solid rgba(49,51,63,0.2); border-radius: 0.75rem; padding: 0.7rem 0.85rem; background: #fff; color: #101828; }
-.qr-reader { width: 100%; min-height: 280px; border-radius: 0.75rem; overflow: hidden; background: #000; }
+.qr-reader { position: relative; width: 100%; min-height: 34rem; border-radius: 0.75rem; overflow: hidden; background: #000; }
+.qr-reader video, .qr-reader canvas { width: 100% !important; height: 100% !important; object-fit: cover; }
 .qr-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
 .qr-btn { border: 0; border-radius: 999px; padding: 0.75rem 1rem; font-weight: 600; cursor: pointer; }
 .qr-start { background: #0f766e; color: #fff; }
@@ -37,6 +38,11 @@ CSS = """
 .qr-stop { background: #344054; color: #fff; }
 .qr-refresh { background: #667085; color: #fff; }
 .qr-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.qr-c { position: absolute; width: 2rem; height: 2rem; border-color: #34d399; border-style: solid; }
+.qr-c-tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+.qr-c-tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+.qr-c-bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+.qr-c-br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
 """
 JS = """
 let qrLibraryPromise = null;
@@ -57,6 +63,27 @@ async function loadQrLibrary(url) {
     qrLibraryPromise = import(url);
   }
   return qrLibraryPromise;
+}
+
+function formatError(error) {
+  if (!error) {
+    return "Unknown browser error.";
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  if (error instanceof Error) {
+    return error.message || error.name || "Unknown browser error.";
+  }
+  const message = [error.name, error.message, error.code].filter(Boolean).join(": ");
+  if (message) {
+    return message;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
 }
 
 function setStatus(state, payload) {
@@ -113,7 +140,7 @@ async function refreshCameraOptions(state, silent = false) {
   } catch (error) {
     setCameraOptions(state, []);
     if (!silent) {
-      setStatus(state, { kind: "error", code: "camera-enumeration-failed", message: `Could not list cameras. ${error?.message || "Check browser permissions."}` });
+      setStatus(state, { kind: "error", code: "camera-enumeration-failed", message: `Could not list cameras. ${formatError(error)}` });
     }
   }
 }
@@ -139,6 +166,11 @@ async function stopScanner(state, clearReader = true) {
   }
   state.isScanning = false;
   state.isPaused = false;
+  removeCornerFrame(state);
+  if (state._orientationHandler) {
+    screen.orientation?.removeEventListener("change", state._orientationHandler);
+    state._orientationHandler = null;
+  }
   if (clearReader) {
     state.reader.innerHTML = "";
   }
@@ -157,21 +189,26 @@ async function startScanner(state) {
   }
   try {
     await refreshCameraOptions(state, true);
+    // Lock portrait to prevent video rotation when phone tilts to landscape
+    if (screen.orientation?.lock) {
+      try { await screen.orientation.lock("portrait"); } catch {}
+    }
     const module = await loadQrLibrary(state.component.data?.library_url);
     const Html5Qrcode = module.Html5Qrcode;
     const Html5QrcodeSupportedFormats = module.Html5QrcodeSupportedFormats;
     if (!state.scanner) {
       state.scanner = new Html5Qrcode(state.readerId, {
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
         verbose: false
       });
     }
     await state.scanner.start(
       resolveCameraConfig(state),
       {
-        fps: 10,
+        fps: 15,
         qrbox: (width, height) => {
-          const edge = Math.floor(Math.min(width, height) * 0.7);
+          const edge = Math.floor(Math.min(width, height) * 0.85);
           return { width: edge, height: edge };
         }
       },
@@ -181,7 +218,7 @@ async function startScanner(state) {
           return;
         }
         const now = Date.now();
-        if (state.lastText === value && now - state.lastScanAt < 1500) {
+        if (state.lastText === value && now - state.lastScanAt < 800) {
           return;
         }
         state.lastText = value;
@@ -202,13 +239,18 @@ async function startScanner(state) {
     await refreshCameraOptions(state, true);
     state.isScanning = true;
     state.isPaused = false;
+    // Register orientation handler to keep video stable when phone tilts
+    state._orientationHandler = () => applyVideoOrientationFix(state);
+    screen.orientation?.addEventListener("change", state._orientationHandler);
+    setTimeout(() => applyVideoOrientationFix(state), 500);
+    injectCornerFrame(state);
     updateButtons(state);
     setStatus(state, { kind: "scanning", code: "scanning", message: "Camera is scanning. Point the QR into the frame." });
   } catch (error) {
     setStatus(state, {
       kind: "error",
       code: "camera-start-failed",
-      message: `Could not start camera scanner. ${error?.message || "Check permission and browser support."}`
+      message: `Could not start camera scanner. ${formatError(error)}`
     });
   }
 }
@@ -224,11 +266,44 @@ function resumeScanner(state) {
   setStatus(state, { kind: "scanning", code: "scanning", message: "Camera is scanning. Point the QR into the frame." });
 }
 
+function applyVideoOrientationFix(state) {
+  // Counter-rotate video/canvas to neutralize browser's auto-rotation when phone tilts
+  const angle = screen.orientation?.angle ?? 0;
+  const counterAngle = angle === 0 ? 0 : (360 - angle) % 360;
+  const transform = counterAngle ? `rotate(${counterAngle}deg)` : "";
+  state.reader.querySelectorAll("video, canvas").forEach(el => {
+    el.style.transform = transform;
+    el.style.transformOrigin = "center center";
+  });
+}
+
+function injectCornerFrame(state) {
+  // Inject L-bracket corners aligned to the qrbox area after camera renders
+  setTimeout(() => {
+    removeCornerFrame(state);
+    const w = state.reader.clientWidth;
+    const h = state.reader.clientHeight;
+    if (!w || !h) return;
+    const edge = Math.floor(Math.min(w, h) * 0.85);
+    const left = Math.floor((w - edge) / 2);
+    const top = Math.floor((h - edge) / 2);
+    const frame = document.createElement("div");
+    frame.className = "qr-corner-frame";
+    frame.style.cssText = `position:absolute;top:${top}px;left:${left}px;width:${edge}px;height:${edge}px;pointer-events:none;z-index:10;`;
+    frame.innerHTML = '<span class="qr-c qr-c-tl"></span><span class="qr-c qr-c-tr"></span><span class="qr-c qr-c-bl"></span><span class="qr-c qr-c-br"></span>';
+    state.reader.appendChild(frame);
+  }, 400);
+}
+
+function removeCornerFrame(state) {
+  const existing = state.reader.querySelector(".qr-corner-frame");
+  if (existing) existing.remove();
+}
+
 export default function(component) {
   const root = component.parentElement;
   let state = root.__mobileQrState;
   if (!state) {
-    root.innerHTML = HTML_CONTENT;
     state = {
       component, enabled: false, isScanning: false, isPaused: false, lastText: "", lastScanAt: 0,
       readerId: `mobile-qr-reader-${component.key}`,
@@ -241,7 +316,8 @@ export default function(component) {
       refresh: root.querySelector(".qr-refresh"),
       cameras: [],
       selectedCameraId: "",
-      scanner: null
+      scanner: null,
+      _orientationHandler: null
     };
     state.reader.id = state.readerId;
     state.cameraSelect.onchange = () => {
@@ -267,7 +343,6 @@ export default function(component) {
   }
 }
 """
-JS = f"const HTML_CONTENT = {HTML!r};\n" + JS
 
 
 def render_mobile_qr_scanner(*, enabled: bool, key: str):
@@ -276,10 +351,11 @@ def render_mobile_qr_scanner(*, enabled: bool, key: str):
         html=HTML,
         css=CSS,
         js=JS,
+        isolate_styles=False,
     )
     return component(
         key=key,
-        height=420,
+        height=820,
         data={"enabled": enabled, "library_url": get_vendored_qr_library_url()},
         default={"status": {"kind": "idle", "code": "ready", "message": "Tap Start camera to begin scanning."}},
         on_status_change=lambda: None,

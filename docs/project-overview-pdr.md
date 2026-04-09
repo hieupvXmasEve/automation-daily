@@ -35,7 +35,7 @@ Ops needs one local tool to verify Shopee order exports against printed labels a
 - Import multiple shop files in one Streamlit session
 - Let the user choose one compare field per imported shop file
 - Scan QR codes from a phone browser camera
-- Resolve the scanned text to the matching shop and source row
+- Resolve the scanned text to every matching imported source row
 - Prevent duplicate scan rows from being appended twice
 - Filter review rows by shop and export them to Excel
 
