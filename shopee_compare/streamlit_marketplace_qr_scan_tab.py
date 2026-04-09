@@ -22,7 +22,7 @@ MARKETPLACE_OPTIONS = ["shopee", "lazada", "tiktok", "website"]
 
 def render_marketplace_qr_scan_tab() -> None:
     _ensure_state()
-    st.caption("Open this tab on a phone over HTTPS to scan QR codes with the rear camera.")
+    st.caption("Open this tab from a secure URL. On phone, use the rear camera. On desktop, choose webcam or Continuity Camera.")
     _render_import_section()
     st.divider()
     _render_scanner_section()

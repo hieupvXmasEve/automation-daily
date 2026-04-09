@@ -382,9 +382,11 @@ Dùng màn hình này khi:
 
 ### 9.4. Lưu ý rất quan trọng về camera điện thoại
 
-- Camera trên browser di động cần `secure context`.
+- Camera trên browser cần `secure context`.
 - Thực tế nên mở bằng `HTTPS`.
 - Không nên kỳ vọng `http://192.168.x.x:8501` sẽ dùng camera ổn định.
+- Trên điện thoại, app sẽ ưu tiên rear camera.
+- Trên máy tính, người dùng có thể giữ webcam mặc định hoặc chọn camera khác mà browser nhìn thấy, ví dụ Continuity Camera từ iPhone trên macOS.
 - Nếu camera bị chặn hoặc browser không hỗ trợ, dùng ô `Manual fallback text`.
 - Tính năng này quét QR trực tiếp trong browser, không phải upload ảnh để OCR.
 - Bundle thư viện quét QR đã được đóng gói local trong app, nên browser không cần tải `html5-qrcode` từ CDN lúc quét.

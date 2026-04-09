@@ -7,6 +7,12 @@ from .mobile_qr_scanner_assets import get_vendored_qr_library_url
 HTML = """
 <div class="qr-wrap">
   <div class="qr-status" data-kind="idle">Tap Start camera to begin scanning.</div>
+  <div class="qr-camera-row">
+    <select class="qr-camera-select" aria-label="Camera device">
+      <option value="">Auto-select camera</option>
+    </select>
+    <button class="qr-btn qr-refresh" type="button">Refresh cameras</button>
+  </div>
   <div class="qr-reader"></div>
   <div class="qr-actions">
     <button class="qr-btn qr-start" type="button">Start camera</button>
@@ -21,16 +27,27 @@ CSS = """
 .qr-status[data-kind="error"] { color: #b42318; }
 .qr-status[data-kind="paused"] { color: #175cd3; }
 .qr-status[data-kind="scanning"] { color: #027a48; }
+.qr-camera-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.qr-camera-select { flex: 1 1 16rem; min-width: 0; border: 1px solid rgba(49,51,63,0.2); border-radius: 0.75rem; padding: 0.7rem 0.85rem; background: #fff; color: #101828; }
 .qr-reader { width: 100%; min-height: 280px; border-radius: 0.75rem; overflow: hidden; background: #000; }
 .qr-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
 .qr-btn { border: 0; border-radius: 999px; padding: 0.75rem 1rem; font-weight: 600; cursor: pointer; }
 .qr-start { background: #0f766e; color: #fff; }
 .qr-resume { background: #175cd3; color: #fff; }
 .qr-stop { background: #344054; color: #fff; }
+.qr-refresh { background: #667085; color: #fff; }
 .qr-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
 """
 JS = """
 let qrLibraryPromise = null;
+
+function isLikelyMobile() {
+  return /android|iphone|ipad|ipod/i.test((navigator.userAgent || "").toLowerCase());
+}
+
+function cameraAutoLabel() {
+  return isLikelyMobile() ? "Auto-select rear camera" : "Auto-select default camera";
+}
 
 async function loadQrLibrary(url) {
   if (!url) {
@@ -52,6 +69,65 @@ function updateButtons(state) {
   state.start.disabled = !state.enabled || state.isScanning || state.isPaused;
   state.resume.disabled = !state.enabled || !state.isPaused;
   state.stop.disabled = !state.enabled || (!state.isScanning && !state.isPaused);
+  state.refresh.disabled = !state.enabled || state.isScanning;
+}
+
+function setCameraOptions(state, cameras) {
+  const previous = state.cameraSelect.value || state.selectedCameraId || "";
+  state.cameras = Array.isArray(cameras) ? cameras : [];
+  state.cameraSelect.innerHTML = "";
+  const autoOption = document.createElement("option");
+  autoOption.value = "";
+  autoOption.textContent = cameraAutoLabel();
+  state.cameraSelect.appendChild(autoOption);
+  state.cameras.forEach((camera, index) => {
+    const option = document.createElement("option");
+    option.value = camera.id || "";
+    option.textContent = (camera.label || "").trim() || `Camera ${index + 1}`;
+    state.cameraSelect.appendChild(option);
+  });
+  const fallback = previous && state.cameras.some((camera) => camera.id === previous)
+    ? previous
+    : (!isLikelyMobile() && state.cameras[0] ? state.cameras[0].id : "");
+  state.cameraSelect.value = fallback;
+  state.selectedCameraId = state.cameraSelect.value;
+}
+
+async function refreshCameraOptions(state, silent = false) {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    setCameraOptions(state, []);
+    if (!silent) {
+      setStatus(state, { kind: "error", code: "camera-enumeration-unsupported", message: "This browser does not expose camera device selection." });
+    }
+    return;
+  }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cameras = devices
+      .filter((device) => device.kind === "videoinput")
+      .map((device) => ({ id: device.deviceId, label: device.label }));
+    setCameraOptions(state, cameras);
+    if (!silent && cameras.length) {
+      setStatus(state, { kind: "idle", code: "camera-list-ready", message: "Camera list refreshed. Choose a device or use auto-select." });
+    }
+  } catch (error) {
+    setCameraOptions(state, []);
+    if (!silent) {
+      setStatus(state, { kind: "error", code: "camera-enumeration-failed", message: `Could not list cameras. ${error?.message || "Check browser permissions."}` });
+    }
+  }
+}
+
+function resolveCameraConfig(state) {
+  const selectedId = state.cameraSelect.value;
+  state.selectedCameraId = selectedId;
+  if (selectedId) {
+    return selectedId;
+  }
+  if (isLikelyMobile()) {
+    return { facingMode: "environment" };
+  }
+  return state.cameras[0]?.id || { facingMode: "user" };
 }
 
 async function stopScanner(state, clearReader = true) {
@@ -80,6 +156,7 @@ async function startScanner(state) {
     return;
   }
   try {
+    await refreshCameraOptions(state, true);
     const module = await loadQrLibrary(state.component.data?.library_url);
     const Html5Qrcode = module.Html5Qrcode;
     const Html5QrcodeSupportedFormats = module.Html5QrcodeSupportedFormats;
@@ -90,7 +167,7 @@ async function startScanner(state) {
       });
     }
     await state.scanner.start(
-      { facingMode: "environment" },
+      resolveCameraConfig(state),
       {
         fps: 10,
         qrbox: (width, height) => {
@@ -122,6 +199,7 @@ async function startScanner(state) {
       },
       () => {}
     );
+    await refreshCameraOptions(state, true);
     state.isScanning = true;
     state.isPaused = false;
     updateButtons(state);
@@ -155,13 +233,21 @@ export default function(component) {
       component, enabled: false, isScanning: false, isPaused: false, lastText: "", lastScanAt: 0,
       readerId: `mobile-qr-reader-${component.key}`,
       status: root.querySelector(".qr-status"),
+      cameraSelect: root.querySelector(".qr-camera-select"),
       reader: root.querySelector(".qr-reader"),
       start: root.querySelector(".qr-start"),
       resume: root.querySelector(".qr-resume"),
       stop: root.querySelector(".qr-stop"),
+      refresh: root.querySelector(".qr-refresh"),
+      cameras: [],
+      selectedCameraId: "",
       scanner: null
     };
     state.reader.id = state.readerId;
+    state.cameraSelect.onchange = () => {
+      state.selectedCameraId = state.cameraSelect.value;
+    };
+    state.refresh.onclick = () => refreshCameraOptions(state, false);
     state.start.onclick = () => startScanner(state);
     state.resume.onclick = () => resumeScanner(state);
     state.stop.onclick = async () => {
@@ -172,6 +258,7 @@ export default function(component) {
   }
   state.component = component;
   state.enabled = Boolean(component.data?.enabled);
+  setCameraOptions(state, state.cameras);
   updateButtons(state);
   if (!state.enabled) {
     setStatus(state, { kind: "disabled", code: "no-shops", message: "Import at least one shop to enable camera scan." });
@@ -180,7 +267,7 @@ export default function(component) {
   }
 }
 """
-JS = f"const HTML_CONTENT = {HTML!r};\\n" + JS
+JS = f"const HTML_CONTENT = {HTML!r};\n" + JS
 
 
 def render_mobile_qr_scanner(*, enabled: bool, key: str):

@@ -80,7 +80,8 @@ Internal UI scope:
 
 ## Mobile QR Scan Notes
 
-- Open the app on the phone from a secure URL. `HTTPS` is the reliable path. Plain `http://192.168.x.x:8501` is expected to fail camera access in most mobile browsers.
+- Open the app from a secure URL. `HTTPS` is the reliable path. Plain `http://192.168.x.x:8501` is expected to fail camera access in most mobile browsers.
+- On phones, the scanner auto-prefers the rear camera. On desktop browsers, users can keep the default webcam or choose another detected camera such as macOS Continuity Camera.
 - The browser decodes the QR locally and only sends decoded text back to Python for matching.
 - The QR decoder bundle is vendored locally inside the app, so the phone browser does not need to fetch `html5-qrcode` from a public CDN at scan time.
 

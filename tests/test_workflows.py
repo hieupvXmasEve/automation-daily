@@ -25,15 +25,14 @@ ROOT = Path(__file__).resolve().parent.parent
 TIKTOK_PDF_PATH = Path.home() / "Downloads" / "3.TikTok PPM (B4716) - 10- đơn  - 07.04.2026.pdf"
 
 
-def _fixture_path(pattern: str) -> Path:
+def _fixture_path(pattern: str) -> Path | None:
     matches = sorted((ROOT / "shopee").glob(pattern))
-    if not matches:
-        raise FileNotFoundError(f"Missing fixture matching {pattern}")
-    return matches[0]
+    return matches[0] if matches else None
 
 
 EXCEL_PATH = _fixture_path("*.xlsx")
 PDF_PATH = _fixture_path("*.pdf")
+COMPARE_FIXTURES_AVAILABLE = EXCEL_PATH is not None and PDF_PATH is not None
 
 
 class FakeUpload:
@@ -46,7 +45,10 @@ class FakeUpload:
 
 
 class WorkflowServiceTests(unittest.TestCase):
+    @unittest.skipUnless(COMPARE_FIXTURES_AVAILABLE, "Repo compare fixtures not available")
     def test_run_compare_filters_rows_and_keeps_download_bytes_usable(self) -> None:
+        assert EXCEL_PATH is not None
+        assert PDF_PATH is not None
         with tempfile.TemporaryDirectory() as tmp_dir:
             result = run_compare(
                 CompareRunRequest(
@@ -64,7 +66,9 @@ class WorkflowServiceTests(unittest.TestCase):
         self.assertEqual(set(artifact_bytes), {"comparison.csv", "comparison.xlsx", "comparison.pdf"})
         self.assertTrue(all(len(data) > 0 for data in artifact_bytes.values()))
 
+    @unittest.skipUnless(EXCEL_PATH is not None, "Repo extract-items fixture not available")
     def test_run_extract_items_returns_frame_and_output(self) -> None:
+        assert EXCEL_PATH is not None
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = Path(tmp_dir) / "order-items.csv"
             result = run_extract_items(
